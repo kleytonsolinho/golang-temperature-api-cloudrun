@@ -42,13 +42,6 @@ func GetCepHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	apiKey, ok := r.Context().Value("WEATHER_API_KEY").(string)
-	if !ok {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode("Erro ao obter a chave da API de tempo.")
-		return
-	}
-
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
@@ -56,7 +49,7 @@ func GetCepHandler(w http.ResponseWriter, r *http.Request) {
 	chTempurature := make(chan float64)
 
 	go getCepViaCEP(cepParams, chLocale)
-	go getTemperature(chTempurature, chLocale, apiKey)
+	go getTemperature(chTempurature, chLocale)
 
 	for {
 		select {
@@ -110,7 +103,7 @@ func getCepViaCEP(cepParams string, chLocale chan string) {
 	chLocale <- result.Localidade
 }
 
-func getTemperature(chTemperature chan float64, chLocale chan string, apiKey string) {
+func getTemperature(chTemperature chan float64, chLocale chan string) {
 	locale := <-chLocale
 	if locale == "" {
 		return
@@ -118,7 +111,7 @@ func getTemperature(chTemperature chan float64, chLocale chan string, apiKey str
 
 	escapedLocale := url.QueryEscape(locale)
 
-	req, err := http.NewRequest("GET", "https://api.weatherapi.com/v1/current.json?q="+escapedLocale+"&key="+apiKey, nil)
+	req, err := http.NewRequest("GET", "https://api.weatherapi.com/v1/current.json?q="+escapedLocale+"&key=0893d285f33543a2a36184203240302", nil)
 	if err != nil {
 		chTemperature <- 0
 		return
