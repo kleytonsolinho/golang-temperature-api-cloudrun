@@ -13,7 +13,8 @@ func main() {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
-	r.Get("/{cep}", handlers.GetCepHandler)
+	r.Get("/", handlers.HomeHandler)
+	r.Get("/cep/{cep}", handlers.GetCepHandler)
 
 	http.ListenAndServe(":8080", r)
 }
