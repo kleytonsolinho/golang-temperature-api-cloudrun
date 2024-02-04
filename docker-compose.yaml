@@ -1,10 +1,11 @@
 version: "3"
 
 services:
-  golang-temperature-api-cloudrun:
-    build: .
+  golang-temperature-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
     ports:
       - "8080:8080"
     volumes:
       - .:/app
-      - /etc/ssl/certs:/etc/ssl/certs:ro
