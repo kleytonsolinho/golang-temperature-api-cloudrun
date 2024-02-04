@@ -7,5 +7,4 @@ services:
       - "8080:8080"
     volumes:
       - .:/app
-    environment:
-      - WEATHER_API_KEY=${WEATHER_API_KEY}
+      - /etc/ssl/certs:/etc/ssl/certs:ro
