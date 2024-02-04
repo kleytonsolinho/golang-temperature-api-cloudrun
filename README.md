@@ -52,4 +52,33 @@ go run cmd/server/main.go
 
 ```bash
 curl http:localhost:8080/cep/01001000
-````
+```
+
+## Como Utilizar localmente com Docker:
+
+1. **Acesse a pasta do app:**
+&nbsp;
+
+```bash
+cd golang-temperature-api-cloudrun
+```
+&nbsp;
+2. **Rode o app:**
+&nbsp;
+
+```bash 
+docker-compose up
+```
+
+ou 
+
+```bash 
+docker-compose up -d
+```
+&nbsp;
+3. **Abra o navegador:**
+&nbsp;
+
+<a href="http://localhost:8080/">
+  Abra a página da web http://localhost:8080
+</a>
