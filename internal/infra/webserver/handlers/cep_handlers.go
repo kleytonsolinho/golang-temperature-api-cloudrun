@@ -1,19 +1,17 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"net/url"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 )
 
-type Cep struct {
+type CepResponse struct {
 	Cep        string `json:"cep"`
 	Logradouro string `json:"logradouro"`
 	Bairro     string `json:"bairro"`
@@ -21,14 +19,14 @@ type Cep struct {
 	Uf         string `json:"uf"`
 }
 
-type Temperature struct {
+type TemperatureResponse struct {
 	Current struct {
 		TempC float64 `json:"temp_c"`
 		TempF float64 `json:"temp_f"`
 	} `json:"current"`
 }
 
-type ResponseBody struct {
+type TransfromTemperatureResponse struct {
 	TempC float64 `json:"temp_C"`
 	TempF float64 `json:"temp_F"`
 	TempK float64 `json:"temp_K"`
@@ -42,119 +40,97 @@ func GetCepHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	chLocale := make(chan string)
-	chTempurature := make(chan float64)
-
-	go getCepViaCEP(cepParams, chLocale)
-	go getTemperature(chTempurature, chLocale)
-
-	for {
-		select {
-		case temperature := <-chTempurature:
-			if temperature == 0 {
-				w.WriteHeader(http.StatusNotFound)
-				json.NewEncoder(w).Encode("can not find temperature")
-				return
-			}
-
-			response := getTemperatureFandK(temperature)
-			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(response)
-			return
-		case <-ctx.Done():
-			w.WriteHeader(http.StatusRequestTimeout)
-			json.NewEncoder(w).Encode("timeout exceeded")
-			return
-		}
+	cep, err := getCepViaCEP(cepParams)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode("error getting zipcode")
+		return
 	}
+	temp, err := getTemperature(cep.Localidade)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode("error getting temperature")
+		return
+	}
+
+	tempFandK := getTemperatureFandK(temp.Current.TempC)
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(tempFandK)
 }
 
-func getCepViaCEP(cepParams string, chLocale chan string) {
+func getCepViaCEP(cepParams string) (*CepResponse, error) {
 	req, err := http.NewRequest("GET", "http://viacep.com.br/ws/"+cepParams+"/json/", nil)
 	if err != nil {
-		chLocale <- ""
-		panic(err)
+		return nil, err
 	}
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		chLocale <- ""
-		panic(err)
+		return nil, err
 	}
 	defer res.Body.Close()
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		chLocale <- ""
-		panic(err)
+		return nil, err
 	}
 
-	var result Cep
-	err = json.Unmarshal(body, &result)
+	var resultCep CepResponse
+	err = json.Unmarshal(body, &resultCep)
 	if err != nil {
-		chLocale <- ""
-		panic(err)
+		return nil, err
 	}
 
-	log.Printf("Response ViaCEP: %v", result)
-	chLocale <- result.Localidade
+	log.Printf("Response ViaCEP: %v", resultCep)
+
+	return &resultCep, nil
 }
 
-func getTemperature(chTemperature chan float64, chLocale chan string) {
-	locale := <-chLocale
-	if locale == "" {
-		return
-	}
-
+func getTemperature(locale string) (*TemperatureResponse, error) {
 	escapedLocale := url.QueryEscape(locale)
 
 	req, err := http.NewRequest("GET", "https://api.weatherapi.com/v1/current.json?q="+escapedLocale+"&key=0893d285f33543a2a36184203240302", nil)
 	if err != nil {
-		chTemperature <- 0
-		return
+		return nil, err
 	}
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		chTemperature <- 0
-		return
+		return nil, err
 	}
 	defer res.Body.Close()
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		chTemperature <- 0
-		return
+		return nil, err
 	}
 
 	if res.StatusCode != http.StatusOK {
 		fmt.Printf("Erro na resposta HTTP. Código: %d\n", res.StatusCode)
 		fmt.Println("Corpo da resposta:", string(body))
-		chTemperature <- 0
-		return
+		return nil, err
 	}
 
-	var resultTemperature Temperature
+	var resultTemperature TemperatureResponse
 	err = json.Unmarshal(body, &resultTemperature)
 	if err != nil {
 		fmt.Println("Erro ao fazer o Unmarshal do JSON:", err)
-		chTemperature <- 0
-		return
+		return nil, err
 	}
 
-	log.Printf("Response Temperature C: %v", resultTemperature.Current.TempC)
-	log.Printf("Response Temperature F: %v", resultTemperature.Current.TempF)
-	chTemperature <- resultTemperature.Current.TempC
+	log.Printf("Response Temperature C: %v\n", resultTemperature.Current.TempC)
+
+	return &resultTemperature, nil
 }
 
-func getTemperatureFandK(tempC float64) ResponseBody {
+func getTemperatureFandK(tempC float64) TransfromTemperatureResponse {
 	tempF := (tempC * 1.8) + 32
 	tempK := tempC + 273
 
-	return ResponseBody{
+	log.Printf("Response Temperature F: %v\n", tempF)
+	log.Printf("Response Temperature K: %v\n", tempK)
+
+	return TransfromTemperatureResponse{
 		TempC: tempC,
 		TempF: tempF,
 		TempK: tempK,
