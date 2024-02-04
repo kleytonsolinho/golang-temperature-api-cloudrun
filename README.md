@@ -12,11 +12,44 @@ Este programa em Go é um servidor HTTP que fornece informações de endereço c
   - O servidor também fornece informações de temperatura atual em Celsius, Fahrenheit e Kelvin com base na localidade informada.
   - Se a localidade estiver ausente ou não puder ser obtida, o servidor retornará uma resposta com temperatura zero.
 
-## Como Utilizar
+## Como utilizar no ambiente de deploy:
+https://golang-temperature-api-cloudrun-wirapf7gfq-uc.a.run.app
 
-1. **Requisitos:**
+ou com a URL direta
+
+https://golang-temperature-api-cloudrun-wirapf7gfq-uc.a.run.app/cep/01001000
+
+## Como Utilizar localmente:
+
+1. **Requisitos:** 
+&nbsp;
    - Certifique-se de ter o Go instalado na sua máquina.
-
+&nbsp;
 2. **Clonar o Repositório:**
-   ```bash
-   git clone https://seurepositorio.com/cep-temperatura-api
+&nbsp;
+
+```bash
+git clone https://github.com/kleytonsolinho/golang-temperature-api-cloudrun.git
+```
+&nbsp;
+3. **Acesse a pasta do app:**
+&nbsp;
+
+```bash
+cd golang-temperature-api-cloudrun
+```
+&nbsp;
+4. **Rode o app:**
+&nbsp;
+
+```bash 
+go run cmd/server/main.go
+```
+
+&nbsp;
+5. **Dispare um cURL para a URL:**
+&nbsp;
+
+```bash
+curl http:localhost:8080/cep/01001000
+````
