@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"unicode"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -33,7 +34,9 @@ type TransfromTemperatureResponse struct {
 
 func GetCepHandler(w http.ResponseWriter, r *http.Request) {
 	cepParams := chi.URLParam(r, "cep")
-	if len(cepParams) != 8 || cepParams == "00000000" {
+	cepParams = sanitizeString(cepParams)
+
+	if !validateCep(cepParams) {
 		w.WriteHeader(http.StatusUnprocessableEntity)
 		json.NewEncoder(w).Encode("invalid zipcode")
 		return
@@ -55,6 +58,34 @@ func GetCepHandler(w http.ResponseWriter, r *http.Request) {
 	tempFandK := getTemperatureFandK(temp.Current.TempC)
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(tempFandK)
+}
+
+func validateCep(cep string) bool {
+	if len(cep) != 8 {
+		return false
+	}
+
+	for _, char := range cep {
+		if !unicode.IsDigit(char) {
+			return false
+		}
+	}
+
+	if cep == "00000000" {
+		return false
+	}
+
+	return true
+}
+
+func sanitizeString(str string) string {
+	var sanitized []rune
+	for _, char := range str {
+		if unicode.IsDigit(char) {
+			sanitized = append(sanitized, char)
+		}
+	}
+	return string(sanitized)
 }
 
 func getCepViaCEP(cepParams string) (*CepResponse, error) {
