@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"log"
 	"net/http"
@@ -44,8 +45,8 @@ func GetCepHandler(w http.ResponseWriter, r *http.Request) {
 
 	cep, err := getCepViaCEP(cepParams)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode("error getting zipcode")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode("can not find zipcode")
 		return
 	}
 	temp, err := getTemperature(cep.Localidade)
@@ -116,6 +117,11 @@ func getCepViaCEP(cepParams string) (*CepResponse, error) {
 	}
 
 	log.Printf("Response ViaCEP: %v", resultCep)
+
+	if resultCep.Cep == "" {
+		log.Println("CEP não encontrado")
+		return nil, errors.New("CEP não encontrado")
+	}
 
 	return &resultCep, nil
 }
